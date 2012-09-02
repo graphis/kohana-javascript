@@ -23,7 +23,17 @@ class Kohana_Javascript {
     protected $_config;
 
     // Singleton instance
-    public static $_instance;
+    protected static $_instance;
+
+    /**
+     * Construct
+     *
+     * @param $config_group
+     */
+    protected function __construct($config_group) {
+        $this->_config = Kohana::$config
+            ->load($config_group);
+    }
 
     /**
      * Scan all specified directories for js files
@@ -36,7 +46,7 @@ class Kohana_Javascript {
         $this->_files = array();
 
         // Get external resources
-        $external = $this->config('external');
+        $external = $this->_config->get('external');
 
         // Add external resources to file list
         foreach ($external as $resource)
@@ -44,8 +54,8 @@ class Kohana_Javascript {
             $this->_add_file($resource);
         }
 
-        // Get resources with priority
-        $priority = $this->config('priority');
+        // Get resources with higher priority
+        $priority = $this->_config->get('priority');
 
         // Add resources with priority to file list
         foreach ($priority as $resource)
@@ -54,7 +64,7 @@ class Kohana_Javascript {
         }
 
         // Get directory list to scan
-        $this->_dirs = $this->config('dirs');
+        $this->_dirs = $this->_config->get('dirs');
 
         // Scan each directory
         foreach ($this->_dirs as $dir)
@@ -109,16 +119,22 @@ class Kohana_Javascript {
 
         // Only add js files
         if (pathinfo($file, PATHINFO_EXTENSION) != 'js')
+        {
             return FALSE;
+        }
 
         // Exclude file if already in list
         if (in_array($dir.'/'.$file, $this->_files))
+        {
             return FALSE;
+        }
 
-        // Exclude file if in exclude list
-        $exclude = $this->config('exclude');
+        // Exclude file if it is on exclude list
+        $exclude = $this->_config->get('exclude');
         if (in_array($dir.'/'.$file, $exclude))
+        {
             return FALSE;
+        }
 
         return TRUE;
     }
@@ -133,10 +149,12 @@ class Kohana_Javascript {
     {
         // If already added, return
         if (in_array($file, $this->_files))
+        {
             return FALSE;
+        }
 
         // Get dependency list
-        $dependencies = $this->config('dependencies');
+        $dependencies = $this->_config->get('dependencies');
 
         // Get dependencies of current file
         $d = Arr::get($dependencies, $file, array());
@@ -173,7 +191,7 @@ class Kohana_Javascript {
         set_time_limit(0);
 
         // Get external resource list
-        $external = $this->config('external');
+        $external = $this->_config->get('external');
 
         foreach ($this->_files as $file)
         {
@@ -228,13 +246,17 @@ class Kohana_Javascript {
     /**
      * Compresses the combined script
      *
+     * @throws Kohana_Exception
      * @return Kohana_Javascript
      */
     public function compress()
     {
         if ( ! $this->_script)
+        {
             throw new Kohana_Exception('First combine the scripts, and then compress.');
+        }
 
+        // Include jsmin
         require Kohana::find_file('vendor/jsmin', 'jsmin');
         $this->_script = JSMin::minify($this->_script);
 
@@ -248,20 +270,22 @@ class Kohana_Javascript {
      */
     public function render()
     {
+        $r = '';
+
         if ($this->_script)
         {
             // The scripts were combined
-            echo '<script type="text/javascript">'.PHP_EOL;
-            echo $this->_script.PHP_EOL;
-            echo '</script>'.PHP_EOL;
+            $r .=  '<script type="text/javascript">'.PHP_EOL;
+            $r .=  $this->_script.PHP_EOL;
+            $r .=  '</script>'.PHP_EOL;
         }
         else
         {
             // Get base url
-            $base_url = rtrim($this->config('base_url'), '/');
+            $base_url = rtrim($this->_config->get('base_url'), '/');
 
             // Get external resource list
-            $external = $this->config('external');
+            $external = $this->_config->get('external');
 
             // The script weren't combined
             foreach ($this->_files as $file)
@@ -272,23 +296,26 @@ class Kohana_Javascript {
                     $file = $base_url.'/'.$file;
                 }
 
-                echo HTML::script($file).PHP_EOL;
+                $r .= HTML::script($file).PHP_EOL;
             }
         }
 
-        return $this;
+        return $r;
     }
 
     /**
      * Save the combined script to file
      *
      * @param $file
+     * @throws Kohana_Exception
      * @return Kohana_Javascript
      */
     public function save($file)
     {
        if ( ! $this->_script)
+       {
            throw new Kohana_Exception('First combine the scripts, and then save.');
+       }
 
         file_put_contents($file, $this->_script);
 
@@ -296,35 +323,16 @@ class Kohana_Javascript {
     }
 
     /**
-     * Return config item
-     *
-     * @param $key
-     * @param null $default
-     * @return mixed
-     */
-    public function config($key = NULL, $default = NULL)
-    {
-        if ( ! isset($this->_config))
-        {
-            $this->_config = Kohana::$config->load('javascript')->as_array();
-        }
-
-        if ( ! isset($key))
-            return $this->_config;
-
-        return isset($this->_config[$key]) ? $this->_config[$key] : $default;
-    }
-
-    /**
      * Returns a singleton instance of the class.
      *
-     * @return	Javascript
+     * @param $config_group
+     * @return Javascript
      */
-    public static function instance()
+    public static function instance($config_group)
     {
         if ( ! Javascript::$_instance instanceof Javascript)
         {
-            Javascript::$_instance = new Javascript();
+            Javascript::$_instance = new Javascript($config_group);
         }
 
         return Javascript::$_instance;
