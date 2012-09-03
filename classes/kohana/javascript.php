@@ -82,6 +82,14 @@ class Kohana_Javascript {
      */
     protected function _do_scan($dir)
     {
+        // Exclude directory if it is on exclude list
+        $exclude = $this->_config->get('exclude');
+        if (in_array($dir, $exclude))
+        {
+            return FALSE;
+        }
+
+
         // List of directories found
         $dirs = array();
 
