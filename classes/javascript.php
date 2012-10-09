@@ -3,7 +3,7 @@
  * @package		Javascript
  * @author      Pap Tamas
  * @copyright   (c) 2011-2012 Pap Tamas
- * @website		https://github.com/paptamas/Kohana-Javascript-Module
+ * @website		https://github.com/paptamas/kohana-javascript
  * @license		http://www.opensource.org/licenses/isc-license.txt
  *
  */
